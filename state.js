@@ -12,120 +12,57 @@
   */
  const isObject = input => input != null && typeof input === 'object' && Array.isArray(input) === false;
  
-export default class State {
+/**
+ * A class to manage state
+ */
+ export default class State {
+	#privateState;
 	constructor(){
-		this.lastUid = -1;
-		this.keys = {};
-		this.internalState = {};
+		this.#privateState = {};
 	}
 
 	/**
-	 * Subscribe. Sets a state object key and callback
+	 * Gets the state by key if key exists
 	 * @param { string } key 
-	 * @param { function } func 
-	 * @returns { string } token
+	 * @returns a clone of the property value.
 	 */
-	subscribe(key, func){
-        
-		// key is not registered yet
-		if ( !Object.hasOwn(this.keys, key ) ){
-			this.keys[key] = [];
+	getStateKey(key){
+		let state = false;
+
+		if(Object.hasOwn(this.#privateState, key)){
+			state = this.#privateState[key];
 		}
 
-		var token = (++this.lastUid).toString();
-
-		this.keys[key].push( { token : token, func : func } );
-
-		// return token for unsubscribing
-		return token;
+		return clone(state);
 	}
 
 	/**
-	 * Unsubscribes with token. Remove State key and callback.
-	 * @param { string } token 
-	 * @returns { string | boolean } token or false
+	 * @returns a clone of the state object
 	 */
-	unsubscribe( token ){
-
-		let keys = this.keys;
-
-		for ( var m in keys ){
-
-			if ( Object.hasOwn(keys, m ) ){
-
-				for ( var i = 0, j = keys[m].length; i < j; i++ ){
-
-					if ( keys[m][i].token === token ){
-
-						keys[m].splice( i, 1 );
-
-						return token;
-
-					}
-
-				}
-
-			}
-
-		}
-
-		return false;
-
+	getState(){
+		return clone(this.#privateState);
 	}
 
-	publish(key, data){
-
-		const self = this;
-
-		if ( !Object.hasOwn(this.keys, key ) ){
-			return false;
-		}
-
-		var notify = function(){
-
-			var subscribers = self.keys[key],
-
-				throwException = function(e){
-
-					return function(){
-
-						throw e;
-
-					};
-
-				}; 
-
-			for ( var i = 0, j = subscribers.length; i < j; i++ ){
-
-				try {
-					//call callback
-					subscribers[i].func( key, ...data );
-
-				} catch( e ){
-
-					setTimeout( throwException(e), 0);
-
-				}
-
-			}
-
-		};
-
-		setTimeout( notify , 0 );
-
-		return true;
-	}
-
-	getState(key){
-		return this.internalState[key];
-	}
-
+	/**
+	 * @param { object } object 
+	 * @returns { object } new state object clone
+	 */
 	setState(object) {
-		if (!isObject(object)) throw new Error('value must be a object');
-		const currentState = clone(this.internalState);
-		const nextState = Object.assign(clone(currentState), object);
-		this.internalState = nextState;
-		return nextState;
+
+		if (!isObject(object)){
+			throw new Error('value must be a object');
+		} 
+
+		const currentState = clone(this.#privateState);
+
+		//set new state
+		//changes only the prop that has changed
+		const newState = Object.assign(clone(currentState), object);
+
+		//The private class property '#privateState' makes the 
+		//current state immutable, so props cannot be set directly.
+		this.#privateState = newState;
+		return newState;
 	}
 
  
